@@ -1,10 +1,11 @@
 const jwt = require("jsonwebtoken");
 const userModel = require("../models/User");
 
-const requireRole = (role) => {
+const requireRole = (roles) => {
   return (req, res, next) => {
-    const userRole = req.user.role;
-    if (userRole === role) {
+    const userRole = req.user.userRole;
+    console.log(userRole);
+    if (roles.includes(userRole)) {
       next();
     } else {
       res.status(403).json({ message: "Access denied" });
@@ -27,7 +28,7 @@ async function authenticateToken(req, res, next) {
         .json({ message: "Access token invalid or expired" });
     }
 
-    const userFromDb = await userModel.getUserByEmail(user.email);
+    const userFromDb = await userModel.getUserByEmail(user.userEmail);
 
     if (!userFromDb || userFromDb.refresh_token !== user.refresh_token) {
       return res

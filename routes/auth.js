@@ -25,7 +25,7 @@ router.post("/login", async (req, res) => {
     }
 
     const token = jwt.sign(
-      { userId: user.id, email: user.email, refresh_token: user.refresh_token },
+      { userId: user.id, userEmail: user.email, userRole: user.role , refresh_token: user.refresh_token },
       process.env.JWT_SECRET,
       { expiresIn: "1h" }
     );
@@ -55,6 +55,7 @@ router.post("/register", async (req, res) => {
       name,
       email,
       password: hashedPassword,
+      role: "worker" // set the role to worker
     };
 
     const createdUser = await userModel.createUser(newUser);

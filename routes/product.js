@@ -1,6 +1,6 @@
 const express = require("express");
 const router = express.Router();
-const { authenticateToken } = require("../middleware/authenticateToken");
+const { authenticateToken, requireRole } = require("../middleware/authenticateToken");
 
 // Dummy product data
 const products = [
@@ -9,8 +9,15 @@ const products = [
   { id: 3, name: "Product 3" },
 ];
 
+
 // Product route
-router.get("/", authenticateToken, (req, res) => {
+router.get("/", authenticateToken, requireRole(['manager', 'Admin']), (req, res) => {
+  // Return the list of products if authenticated
+  res.json(products);
+});
+
+// Protected Product route
+router.get("/list", authenticateToken, requireRole(['manager']), (req, res) => {
   // Return the list of products if authenticated
   res.json(products);
 });

@@ -25,7 +25,7 @@ router.post("/login", async (req, res) => {
     }
 
     const token = jwt.sign(
-      { userId: user.id, userEmail: user.email, userRole: user.role , refresh_token: user.refresh_token },
+      { userId: user.id, userEmail: user.email, refresh_token: user.refresh_token },
       process.env.JWT_SECRET,
       { expiresIn: "1h" }
     );
@@ -54,12 +54,10 @@ router.post("/register", async (req, res) => {
     const newUser = {
       name,
       email,
-      password: hashedPassword,
-      role: "worker" // set the role to worker
+      password: hashedPassword
     };
-
     const createdUser = await userModel.createUser(newUser);
-
+    console.log(createdUser);
     const token = jwt.sign(
       { userId: createdUser.id, email: createdUser.email },
       process.env.JWT_SECRET,

@@ -11,13 +11,13 @@ const products = [
 
 
 // Product route
-router.get("/", authenticateToken, requireRole(['manager', 'Admin']), (req, res) => {
+router.get("/", authenticateToken, (req, res) => {
   // Return the list of products if authenticated
   res.json(products);
 });
 
 // Protected Product route
-router.get("/list", authenticateToken, requireRole(['manager']), (req, res) => {
+router.get("/list", authenticateToken, (req, res) => {
   // Return the list of products if authenticated
   res.json(products);
 });

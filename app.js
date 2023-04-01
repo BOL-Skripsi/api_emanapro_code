@@ -6,7 +6,7 @@ require("dotenv").config();
 // apply rate limiter to all requests
 const limiter = rateLimit({
   windowMs: 2 * 60 * 1000, // 1 minutes
-  max: 20, // limit each IP to 100 requests per windowMs
+  max: 100, // limit each IP to 100 requests per windowMs
 });
 
 app.use(limiter);
@@ -20,6 +20,12 @@ const { authenticateToken } = require("./middleware/authenticateToken");
 // Importing Routes
 const authRoutes = require("./routes/auth");
 const productRoutes = require("./routes/product");
+const organizationRoutes = require("./routes/organization");
+const taskRoutes = require("./routes/task");
+const teamRoutes = require("./routes/team");
+const rubricRoutes = require("./routes/rubric");
+// const teamRoutes = require("./routes/team");
+// const kpiRoutes = require("./routes/kpi");
 
 // Setting up Middleware
 app.use(helmet());
@@ -44,6 +50,14 @@ const requireAuth = (req, res, next) => {
 // Routes
 app.use("/auth", authRoutes);
 app.use("/product", authenticateToken, requireAuth, productRoutes);
+app.use("/organization", authenticateToken, requireAuth, organizationRoutes);
+app.use("/task", taskRoutes);
+app.use("/team", teamRoutes);
+app.use("/rubric", rubricRoutes);
+// app.use("/team", authenticateToken, requireAuth, teamRoutes);
+// app.use("/kpi", authenticateToken, requireAuth, kpiRoutes);
+
+
 
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => console.log(`Server running on port ${PORT}`));

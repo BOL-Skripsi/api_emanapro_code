@@ -1,17 +1,20 @@
 const jwt = require("jsonwebtoken");
 const userModel = require("../models/User");
 
-const requireRole = (roles) => {
-  return (req, res, next) => {
-    const userRole = req.user.userRole;
-    console.log(userRole);
-    if (roles.includes(userRole)) {
-      next();
-    } else {
-      res.status(403).json({ message: "Access denied" });
-    }
-  };
-};
+// const requireRole = (roles) => {
+//   return async (req, res, next) => {
+//     const organizationId = req.params.id;
+//     const user = await userModel.getUserOrganizationRoleById(req.user.userId, organizationId);
+//     const userRole = user.organization_role;
+//     console.log(userRole)
+//     if (roles.includes(userRole)) {
+//       next();
+//     } else {
+//       res.status(403).json({ message: "Access denied" });
+//     }
+//   };
+// };
+
 
 async function authenticateToken(req, res, next) {
   const authHeader = req.headers["authorization"];
@@ -48,4 +51,4 @@ async function authenticateToken(req, res, next) {
   });
 }
 
-module.exports = { authenticateToken, requireRole };
+module.exports = { authenticateToken };

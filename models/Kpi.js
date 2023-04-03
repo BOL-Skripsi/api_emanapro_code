@@ -40,9 +40,24 @@ module.exports = {
 
   async getKpiAssessmentOpebByMemberDetail(userId, duedateId) {
     const query =
-      "SELECT u.uuid AS user_id, tbl_user.name AS user_name, t.name AS team_name, ar.category, COUNT(DISTINCT ar.uuid) AS num_rubrics, COUNT(ka.id) AS num_assessments_with_score, kap.kpi_duedate AS assessment_due_date FROM public.tbl_assessment_rubric ar JOIN public.tbl_team t ON ar.team_id::uuid = t.uuid JOIN public.tbl_team_member tm ON tm.team_id::uuid = ar.team_id::uuid JOIN public.tbl_user u ON u.uuid = tm.user_id::uuid LEFT JOIN public.tbl_kpi_assessment ka ON ar.uuid = ka.rubric_id::uuid AND ka.user_id::uuid = u.uuid AND ka.score IS NOT NULL LEFT JOIN public.tbl_kpi_assessment_period kap ON kap.uuid = COALESCE(ka.assessment_duedate::uuid, kap.uuid) JOIN public.tbl_user tbl_user ON u.uuid = tbl_user.uuid WHERE u.uuid = $1 AND kap.uuid = $2 GROUP BY u.uuid, tbl_user.name, t.name, ar.category, kap.kpi_duedate";
+      "SELECT u.uuid AS user_id, tbl_user.name AS user_name, t.name AS team_name, ar.category, COUNT(DISTINCT ar.uuid) AS num_rubrics, COUNT(ka.id) AS num_assessments_with_score, kap.kpi_duedate AS assessment_due_date, kap.uuid AS assessment_due_date_uuid FROM public.tbl_assessment_rubric ar JOIN public.tbl_team t ON ar.team_id::uuid = t.uuid JOIN public.tbl_team_member tm ON tm.team_id::uuid = ar.team_id::uuid JOIN public.tbl_user u ON u.uuid = tm.user_id::uuid LEFT JOIN public.tbl_kpi_assessment ka ON ar.uuid = ka.rubric_id::uuid AND ka.user_id::uuid = u.uuid AND ka.score IS NOT NULL LEFT JOIN public.tbl_kpi_assessment_period kap ON kap.uuid = COALESCE(ka.assessment_duedate::uuid, kap.uuid) JOIN public.tbl_user tbl_user ON u.uuid = tbl_user.uuid WHERE u.uuid = $1 AND kap.uuid = $2 GROUP BY u.uuid, tbl_user.name, t.name, ar.category, kap.kpi_duedate,  kap.uuid";
       const values = [userId, duedateId]
     const result = await pool.query(query, values);
     return result.rows;
+  },
+
+  async getKpiAssessmentForm(userId, duedateId, category) {
+    const query ="SELECT a.id, a.uuid, a.assessment_period, a.score, a.user_id, a.rubric_id, a.assessment_duedate, a.uraian_kinerja, r.team_id, r.order_rubric, r.performance_metric, r.criteria, r.weight, r.score_system, r.data_source, r.feedback_and_improvement, r.status_approval, r.category, r.description FROM public.tbl_kpi_assessment a LEFT JOIN public.tbl_assessment_rubric r ON a.rubric_id::uuid = r.uuid WHERE a.user_id = $1 AND a.assessment_duedate = $2 AND r.category = $3";
+      const values = [userId, duedateId, category]
+    const result = await pool.query(query, values);
+    return result.rows;
+  },
+
+  async updateKpiAssessmentOpenByMemberDetail(id, score, comment) {
+    const query =
+      "UPDATE tbl_kpi_assessment SET score = $2, comment = $3 WHERE uuid = $1 RETURNING *";
+    const values = [id, score, comment];
+    const result = await pool.query(query, values);
+    return result.rows[0];
   },
 };

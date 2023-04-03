@@ -10,39 +10,49 @@ const pool = new Pool({
 
 module.exports = {
   async createKpiAssessmentRubric(
-    name,
+    category,
+    metric,
     description,
+    criteria,
     weight,
-    target,
-    minimum,
-    maximum,
-    metric
+    score_system,
+    data_source,
+    team_id
   ) {
     const query =
-      "INSERT INTO kpi_assessment_rubric (name, description, weight, target, minimum, maximum, metric) VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING *";
+      "INSERT INTO tbl_assessment_rubric (order_rubric,category, performance_metric,description, criteria, weight, score_system, data_source, team_id) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) RETURNING *";
     const values = [
-      name,
-      description,
-      weight,
-      target,
-      minimum,
-      maximum,
+      1,
+      category,
       metric,
+      description,
+      criteria,
+      weight,
+      score_system,
+      data_source,
+      team_id
     ];
     const result = await pool.query(query, values);
     return result.rows[0];
   },
 
   async getKpiAssessmentRubricById(id) {
-    const query = "SELECT * FROM kpi_assessment_rubric WHERE id = $1";
+    const query = "SELECT * FROM tbl_assessment_rubric WHERE id = $1";
     const values = [id];
     const result = await pool.query(query, values);
     return result.rows[0];
   },
 
   async getKpiAssessmentRubric() {
-    const query = "SELECT * FROM kpi_assessment_rubric";
+    const query = "SELECT ar.id, ar.uuid, ar.team_id, ar.order_rubric, ar.performance_metric, ar.criteria, ar.weight, ar.score_system, ar.data_source, ar.feedback_and_improvement, ar.status_approval, ar.category, ar.description, u.name AS manager_name, t.name AS team_name FROM public.tbl_assessment_rubric ar INNER JOIN public.tbl_team t ON ar.team_id::uuid = t.uuid INNER JOIN public.tbl_user u ON t.manager_id::uuid = u.uuid ";
     const result = await pool.query(query);
+    return result.rows;
+  },
+
+  async getKpiAssessmentRubricByTeamInOrg(id) {
+    const query = "SELECT id, uuid, team_id, order_rubric, performance_metric, criteria, weight, score_system, data_source, feedback_and_improvement, status_approval, category, description FROM public.tbl_assessment_rubric WHERE team_id = $1";
+    const values = [id];
+    const result = await pool.query(query, values);
     return result.rows;
   },
 
@@ -67,6 +77,22 @@ module.exports = {
       minimum,
       maximum,
       metric,
+    ];
+    const result = await pool.query(query, values);
+    return result.rows[0];
+  },
+
+  async reviewKpiAssessmentRubric(
+    id,
+    comment,
+    status_approval,
+  ) {
+    const query =
+      "UPDATE tbl_assessment_rubric SET feedback_and_improvement = $2, status_approval = $3 WHERE uuid = $1 RETURNING *";
+    const values = [
+      id,
+      comment,
+      status_approval
     ];
     const result = await pool.query(query, values);
     return result.rows[0];

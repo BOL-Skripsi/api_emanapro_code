@@ -6,7 +6,7 @@ require("dotenv").config();
 // apply rate limiter to all requests
 const limiter = rateLimit({
   windowMs: 2 * 60 * 1000, // 1 minutes
-  max: 100, // limit each IP to 100 requests per windowMs
+  max: 1000, // limit each IP to 100 requests per windowMs
 });
 
 app.use(limiter);
@@ -24,6 +24,7 @@ const organizationRoutes = require("./routes/organization");
 const taskRoutes = require("./routes/task");
 const teamRoutes = require("./routes/team");
 const rubricRoutes = require("./routes/rubric");
+const kpiRoutes = require("./routes/kpi");
 // const teamRoutes = require("./routes/team");
 // const kpiRoutes = require("./routes/kpi");
 
@@ -54,6 +55,7 @@ app.use("/organization", authenticateToken, requireAuth, organizationRoutes);
 app.use("/task", taskRoutes);
 app.use("/team", teamRoutes);
 app.use("/rubric", rubricRoutes);
+app.use("/kpi", kpiRoutes);
 // app.use("/team", authenticateToken, requireAuth, teamRoutes);
 // app.use("/kpi", authenticateToken, requireAuth, kpiRoutes);
 

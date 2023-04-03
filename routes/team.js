@@ -45,6 +45,97 @@ router.get("/:orgId/list", async (req, res) => {
   }
 });
 
+// Get all teams of an organization
+router.get("/:orgId/:manId/rubric", async (req, res) => {
+  try {
+    const orgId = req.params.orgId;
+    const manId = req.params.manId;
+
+    const organization = await organizationModel.getOrganizationById(orgId);
+
+    if (!organization) {
+      return res.status(404).json({ message: "Organization not found" });
+    }
+
+    const teams = await teamModel.getAllTeamsForRubricByManagerId(orgId, manId);
+
+    res.status(200).json({ teams });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: "Internal Server Error" });
+  }
+});
+
+// Get all avaliable User of an organization
+router.get("/avaliable", async (req, res) => {
+  try {
+
+    const teams = await teamModel.getAllAvaliableUser();
+
+    res.status(200).json({ teams });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: "Internal Server Error" });
+  }
+});
+
+// Get all avaliable Team Member
+router.get("/:teamId/member/list", async (req, res) => {
+  try {
+    const teamId = req.params.teamId;
+    const teams = await teamModel.getAllTeamMember(teamId);
+    console.log(teams);
+    res.status(200).json({ teams });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: "Internal Server Error" });
+  }
+});
+
+// Get all avaliable Team Member
+router.get("/:team_id/member/list", async (req, res) => {
+  try {
+    const teamId = req.params.team_id;
+    const teams = await teamModel.getAllTeamMember(teamId);
+
+    res.status(200).json({ teams });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: "Internal Server Error" });
+  }
+});
+
+// Add a new team member
+router.post("/:orgId/newmember", async (req, res) => {
+  try {
+    const { team_id } = req.body;
+    const { user_id } = req.body;
+    const team = await teamModel.addTeamMember(team_id, user_id);
+    res.status(201).json({ team });
+
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: "Internal Server Error" });
+  }
+});
+
+// Get a team by user id
+router.get("/:userId/me", async (req, res) => {
+  try {
+    const { orgId, userId } = req.params;
+
+    const team = await teamModel.getTeamByUserId(userId);
+
+    if (!team) {
+      return res.status(404).json({ message: "Team not found" });
+    }
+    res.status(200).json({ team });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: "Internal Server Error" });
+  }
+});
+
 // Get a team by ID
 router.get("/:orgId/teams/:teamId", async (req, res) => {
   try {

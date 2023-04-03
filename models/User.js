@@ -18,6 +18,11 @@ module.exports = {
     return result.rows[0];
   },
 
+  async getAllUser() {
+    const result = await pool.query("SELECT u.uuid, u.name as user_name, u.email, t.name as team_name, tm.user_id as team_manager_id, tm.id as team_member_id, m.name as manager_name, org.organization_role FROM public.tbl_user u LEFT JOIN public.tbl_team_member tm ON u.uuid = tm.user_id::uuid LEFT JOIN public.tbl_team t ON tm.team_id::uuid = t.uuid::uuid LEFT JOIN public.tbl_user m ON t.manager_id::uuid = m.uuid::uuid LEFT JOIN public.organization_roles org ON u.uuid = org.user_id::uuid WHERE NOT org.organization_role = 'owner'");
+    return result.rows;
+  },
+
   async getUserOrganizationRoleById(userId, orgId) {
     const result = await pool.query('SELECT * FROM organization_roles WHERE user_id = $1 AND organization_id = $2', [userId, orgId]);
     return result.rows[0];
@@ -33,6 +38,12 @@ module.exports = {
       "SELECT * FROM tbl_user WHERE email = $1",
       [data.email]
     );
+
+    await pool.query(
+      "INSERT INTO organization_roles (organization_id, organization_role,user_id) VALUES ($1, $2, $3)",
+      ['71152531-e247-467f-8839-b78c14d7f71e','employee', userResult.rows[0].uuid]
+    );
+
     return userResult.rows[0];
   },
 
@@ -84,7 +95,7 @@ module.exports = {
     );
   },
 
-  async inviteUserByEmail(email) {
+  async inviteUserByEmail(email, name) {
     // Check if the user already exists
     const existingUser = await this.getUserByEmail(email);
     if (existingUser) {
@@ -96,19 +107,15 @@ module.exports = {
     const salt = await bcrypt.genSalt(10);
     const hashedPassword = await bcrypt.hash(tempPassword, salt);
     // Create a new user with the temporary password
-    const name = "Invited User";
     const User = {
-      name,
-      email,
+      name: name,
+      email:email,
       password: hashedPassword
     };
     const newUser = await this.createUser(User);
 
     // Set the user's status to 'invited'
-    await pool.query("UPDATE tbl_user SET status = $1 WHERE id = $2", [
-      "invited",
-      newUser.id,
-    ]);
+    await pool.query("UPDATE tbl_user SET status = 'invited' WHERE id = $1", [User.id]);
 
     return { user: newUser, password: tempPassword };
   },

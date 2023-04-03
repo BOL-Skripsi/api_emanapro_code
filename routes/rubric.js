@@ -22,16 +22,18 @@ router.get("/", async (req, res) => {
 // Create a KPI assessment rubric
 router.post("/", async (req, res) => {
   try {
-    const { name, description, weight, target, minimum, maximum, metric } =
+    const { category, metric, description, criteria ,weight, score_system, data_source, team_id } =
       req.body;
+      console.log(weight)
     const result = await KpiAssessmentRubric.createKpiAssessmentRubric(
-      name,
+      category,
+      metric,
       description,
+      criteria,
       weight,
-      target,
-      minimum,
-      maximum,
-      metric
+      score_system,
+      data_source,
+      team_id
     );
     res.status(201).json(result);
   } catch (err) {
@@ -45,6 +47,24 @@ router.get("/:id", async (req, res) => {
   try {
     const { id } = req.params;
     const result = await KpiAssessmentRubric.getKpiAssessmentRubricById(id);
+    if (!result) {
+      return res
+        .status(404)
+        .json({ message: "KPI assessment rubric not found" });
+    }
+    res.json(result);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: "Server error" });
+  }
+});
+
+// Get a KPI assessment rubric by team and organization
+router.get("/:orgId/:teamId/list", async (req, res) => {
+  try {
+    const { orgId } = req.params;
+    const { teamId } = req.params;
+    const result = await KpiAssessmentRubric.getKpiAssessmentRubricByTeamInOrg(teamId);
     if (!result) {
       return res
         .status(404)
@@ -72,6 +92,27 @@ router.put("/:id", async (req, res) => {
       minimum,
       maximum,
       metric
+    );
+    if (!result) {
+      return res
+        .status(404)
+        .json({ message: "KPI assessment rubric not found" });
+    }
+    res.json(result);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: "Server error" });
+  }
+});
+
+router.put("/:id/review", async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { comment, status_approval } = req.body;
+    const result = await KpiAssessmentRubric.reviewKpiAssessmentRubric(
+      id,
+      comment,
+      status_approval
     );
     if (!result) {
       return res

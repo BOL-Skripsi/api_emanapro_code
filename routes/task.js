@@ -14,7 +14,11 @@ const {
   deleteTaskById,
   getTaskByUserId,
   getTaskFileById,
-  getAllTasksByTeamId
+  getAllTasksByTeamId,
+  getAllPersonalTasksByMyJuridiction,
+  getTaskReply,
+  getTaskReplyFile,
+  approveTaskById
 } = require("../models/Task");
 
 // Create a task
@@ -53,7 +57,6 @@ router.post('/personal', upload.single('file'), async (req, res) => {
   try {
     const task = req.body;
     const file = req.file; // Access uploaded file data from req.file property
-    console.log(file);
 
     // Create task and attach file data
     const createdTask = await createPersonalTask(task, file);
@@ -73,6 +76,7 @@ router.get('/download/:filename', (req, res) => {
 
   res.sendFile(filePath);
 });
+
 
 // Get all tasks
 router.get("/", async (req, res) => {
@@ -118,6 +122,21 @@ router.get("/:id", async (req, res) => {
   }
 });
 
+// Get a task reply by task ID
+router.get("/reply/:id", async (req, res) => {
+  try {
+    const { id } = req.params;
+    const task = await getTaskReply(id);
+    if (!task) {
+      return res.status(404).json({ message: "Task reply not found" });
+    }
+    res.json(task);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: "Server error" });
+  }
+});
+
 // Get a task file by ID
 router.get("/:id/file", async (req, res) => {
   try {
@@ -148,12 +167,43 @@ router.get("/:userId/personal", async (req, res) => {
   }
 });
 
+// Get all task by manager id
+router.get("/:managerId/personal/manager", async (req, res) => {
+  try {
+    const { managerId } = req.params;
+    const task = await getAllPersonalTasksByMyJuridiction(managerId);
+    if (!task) {
+      return res.status(404).json({ message: "Task not found" });
+    }
+    res.json(task);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: "Server error" });
+  }
+});
+
 // Update a task by ID
 router.put("/:id", async (req, res) => {
   try {
     const { id } = req.params;
     const task = req.body;
     const updatedTask = await updateTaskById(id, task);
+    if (!updatedTask) {
+      return res.status(404).json({ message: "Task not found" });
+    }
+    res.json(updatedTask);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: "Server error" });
+  }
+});
+
+// Approv a task
+router.put("/:id/approval", async (req, res) => {
+  try {
+    const { id } = req.params;
+    const task = req.body;
+    const updatedTask = await approveTaskById(id, task);
     if (!updatedTask) {
       return res.status(404).json({ message: "Task not found" });
     }

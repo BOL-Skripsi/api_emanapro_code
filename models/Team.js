@@ -79,6 +79,17 @@ module.exports = {
     return result.rows;
   },
 
+  async getAllMyJuridictionTeamMember(managerId) {
+    console.log(managerId)
+    const query = {
+      text: "SELECT u.name as user_name, u.uuid as user_id FROM public.tbl_team_member tm LEFT JOIN public.tbl_team t ON tm.team_id::uuid = t.uuid LEFT JOIN public.tbl_user u ON tm.user_id::uuid = u.uuid WHERE t.manager_id = $1",
+      values: [managerId.managerId],
+    };
+
+    const result = await pool.query(query);
+    return result.rows;
+  },
+
   async getTeamByUserId(id) {
     const query = {
       text: "SELECT * FROM tbl_team_member WHERE user_id = $1",

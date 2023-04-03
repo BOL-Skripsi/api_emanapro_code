@@ -75,6 +75,7 @@ const createPersonalTask = async (task, file) => {
     const values = [task_name, description, due_datetime, priority, assign_to, status];
     const { rows } = await pool.query(query, values);
     const taskId = rows[0].uuid;
+    // console.log(taskId)
     if (file) {
       const fileQuery = `
         INSERT INTO tbl_task_file (task_id, file_name, file_type, file_size, file_path)
@@ -183,8 +184,51 @@ const getAllTasksByTeamId = async (teamId) => {
   }
 };
 
+// Get all tasks
+const getAllPersonalTasksByMyJuridiction = async (managerId) => {
+  const query = `SELECT tsk.*, CASE WHEN tf.task_id IS NOT NULL THEN 'Yes' ELSE 'No' END AS has_files, u.name AS user_name FROM public.tbl_team_member tm LEFT JOIN public.tbl_team t ON tm.team_id::uuid = t.uuid LEFT JOIN public.tbl_user u ON tm.user_id::uuid = u.uuid LEFT JOIN public.tbl_task tsk ON u.uuid = tsk.assign_to::uuid LEFT JOIN public.tbl_task_file tf ON tsk.uuid = tf.task_id::uuid WHERE t.manager_id = $1`;
+  const value = [managerId];
+  try {
+    const { rows } = await pool.query(query, value);
+    return rows;
+  } catch (err) {
+    console.error(err);
+    return null;
+  }
+};
+
 // Get a task by ID
 const getTaskById = async (id) => {
+  const query = `
+    SELECT * FROM tbl_task WHERE uuid = $1
+  `;
+  const values = [id];
+  try {
+    const { rows } = await pool.query(query, values);
+    return rows[0];
+  } catch (err) {
+    console.error(err);
+    return null;
+  }
+};
+
+// Get task reply by ID
+const getTaskReply = async (id) => {
+  const query = `
+  SELECT tr.*,(SELECT file_name FROM public.tbl_task_reply_file trf WHERE trf.task_reply_uuid::uuid = tr.uuid) AS file_name FROM public.tbl_task_reply tr WHERE tr.task_id = $1 ORDER BY tr.id
+  `;
+  const values = [id];
+  try {
+    const { rows } = await pool.query(query, values);
+    return rows;
+  } catch (err) {
+    console.error(err);
+    return null;
+  }
+};
+
+// Get task reply by ID
+const getTaskReplyFile = async (id) => {
   const query = `
     SELECT * FROM tbl_task WHERE uuid = $1
   `;
@@ -267,6 +311,31 @@ const updateTaskById = async (id, task) => {
   }
 };
 
+// Approve a task
+const approveTaskById = async (id, task) => {
+  const {
+    comment,
+    status
+  } = task;
+  const query = `
+    UPDATE tbl_task SET manager_comment= $1, status = $2
+    WHERE uuid = $3
+    RETURNING *
+  `;
+  const values = [
+    comment,
+    status,
+    id
+  ];
+  try {
+    const { rows } = await pool.query(query, values);
+    return rows[0];
+  } catch (err) {
+    console.error(err);
+    return null;
+  }
+};
+
 // Delete a task by ID
 const deleteTaskById = async (id) => {
   const query = `
@@ -294,87 +363,9 @@ module.exports = {
   deleteTaskById,
   getTaskByUserId,
   getTaskFileById,
-  getAllTasksByTeamId
+  getAllTasksByTeamId,
+  getAllPersonalTasksByMyJuridiction,
+  getTaskReply,
+  getTaskReplyFile,
+  approveTaskById
 };
-
-// module.exports = {
-//   async createDailyTask(title, description, assignee_id, standard_hours) {
-//     const query =
-//       "INSERT INTO daily_task (title, description, assignee_id, standard_hours) VALUES ($1, $2, $3, $4) RETURNING *";
-//     const values = [title, description, assignee_id, standard_hours];
-//     const result = await pool.query(query, values);
-//     return result.rows[0];
-//   },
-
-//   async getDailyTaskById(id) {
-//     const query = "SELECT * FROM daily_task WHERE id = $1";
-//     const values = [id];
-//     const result = await pool.query(query, values);
-//     return result.rows[0];
-//   },
-
-//   async updateDailyTaskById(
-//     id,
-//     title,
-//     description,
-//     assignee_id,
-//     start_time,
-//     end_time,
-//     pause_time,
-//     file_path,
-//     actual_hours
-//   ) {
-//     const query =
-//       "UPDATE daily_task SET title = $2, description = $3, assignee_id = $4, start_time = $5, end_time = $6, pause_time = $7, file_path = $8, actual_hours = $9 WHERE id = $1 RETURNING *";
-//     const values = [
-//       id,
-//       title,
-//       description,
-//       assignee_id,
-//       start_time,
-//       end_time,
-//       pause_time,
-//       file_path,
-//       actual_hours,
-//     ];
-//     const result = await pool.query(query, values);
-//     return result.rows[0];
-//   },
-
-//   async deleteDailyTaskById(id) {
-//     const query = "DELETE FROM daily_task WHERE id = $1 RETURNING *";
-//     const values = [id];
-//     const result = await pool.query(query, values);
-//     return result.rows[0];
-//   },
-
-//   async createDailyTaskReply(daily_task_id, reply_text, author_id, file_path) {
-//     const query =
-//       "INSERT INTO daily_task_reply (daily_task_id, reply_text, author_id, file_path) VALUES ($1, $2, $3, $4) RETURNING *";
-//     const values = [daily_task_id, reply_text, author_id, file_path];
-//     const result = await pool.query(query, values);
-//     return result.rows[0];
-//   },
-
-//   async getDailyTaskReplyById(id) {
-//     const query = "SELECT * FROM daily_task_reply WHERE id = $1";
-//     const values = [id];
-//     const result = await pool.query(query, values);
-//     return result.rows[0];
-//   },
-
-//   async updateDailyTaskReplyById(id, reply_text, file_path) {
-//     const query =
-//       "UPDATE daily_task_reply SET reply_text = $2, file_path = $3 WHERE id = $1 RETURNING *";
-//     const values = [id, reply_text, file_path];
-//     const result = await pool.query(query, values);
-//     return result.rows[0];
-//   },
-
-//   async deleteDailyTaskReplyById(id) {
-//     const query = "DELETE FROM daily_task_reply WHERE id = $1 RETURNING *";
-//     const values = [id];
-//     const result = await pool.query(query, values);
-//     return result.rows[0];
-//   },
-// };

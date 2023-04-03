@@ -92,6 +92,20 @@ router.get("/:teamId/member/list", async (req, res) => {
   }
 });
 
+router.get('/:managerId/myjuridiction', async (req, res) => {
+  try {
+    const managerId = req.params;
+    const tasks = await teamModel.getAllMyJuridictionTeamMember(managerId);
+    if (!tasks) {
+      return res.status(404).json({ message: "No team member found" });
+    }
+    res.json(tasks);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: "Server error" });
+  }
+});
+
 // Get all avaliable Team Member
 router.get("/:team_id/member/list", async (req, res) => {
   try {

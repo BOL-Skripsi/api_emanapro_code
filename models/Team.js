@@ -82,7 +82,7 @@ module.exports = {
   async getAllMyJuridictionTeamMember(managerId) {
     console.log(managerId)
     const query = {
-      text: "SELECT u.name as user_name, u.uuid as user_id FROM public.tbl_team_member tm LEFT JOIN public.tbl_team t ON tm.team_id::uuid = t.uuid LEFT JOIN public.tbl_user u ON tm.user_id::uuid = u.uuid WHERE t.manager_id = $1",
+      text: "SELECT u.name as user_name, u.uuid as user_id, t.name as team_name FROM public.tbl_team_member tm LEFT JOIN public.tbl_team t ON tm.team_id::uuid = t.uuid LEFT JOIN public.tbl_user u ON tm.user_id::uuid = u.uuid WHERE t.manager_id = $1",
       values: [managerId.managerId],
     };
 

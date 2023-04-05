@@ -18,7 +18,11 @@ const {
   getAllPersonalTasksByMyJuridiction,
   getTaskReply,
   getTaskReplyFile,
-  approveTaskById
+  approveTaskById,
+  startTask,
+  replyTask,
+  managerReplyTask,
+  getAllTeamTasksByMyJuridiction
 } = require("../models/Task");
 
 // Create a task
@@ -64,6 +68,65 @@ router.post('/personal', upload.single('file'), async (req, res) => {
       return res.status(500).json({ message: 'Failed to create task' });
     }
     res.status(201).json(createdTask);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
+// Route for creating personal task
+router.post('/team', upload.single('file'), async (req, res) => {
+  try {
+    const task = req.body;
+    const file = req.file; // Access uploaded file data from req.file property
+    const assign_to = JSON.parse(task.assign_to);
+    //Create task and attach file data for each assignee
+    const createdTasks = [];
+    for (const assignee of assign_to) {
+      const createdTask = await createTeamTask(task,assignee.value,file);
+      createdTasks.push(createdTask);
+    } 
+    if (!createdTasks.length) {
+      return res.status(500).json({ message: 'Failed to create tasks' });
+    }
+    res.status(201).json(createdTasks);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
+// Route for reply task
+router.post('/:userId/:taskId/reply', upload.single('file'), async (req, res) => {
+  try {
+    const {userId, taskId} = req.params
+    const reply_comment = req.body.description;
+    const file = req.file; // Access uploaded file data from req.file property
+
+    // Create task and attach file data
+    const replyingTask = await replyTask(taskId, reply_comment, file);
+    if (!replyingTask) {
+      return res.status(500).json({ message: 'Failed to reply task' });
+    }
+    res.status(201).json(replyingTask);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
+// Route for reply task
+router.put('/:taskId/manager_reply', upload.single('file'), async (req, res) => {
+  try {
+    const {taskId} = req.params
+    const reply_comment = req.body.description;
+    const reply_status = req.body.status;
+    // Create task and attach file data
+    const replyingTask = await managerReplyTask(taskId, reply_comment, reply_status);
+    if (!replyingTask) {
+      return res.status(500).json({ message: 'Failed to reply task' });
+    }
+    res.status(201).json(replyingTask);
   } catch (err) {
     console.error(err);
     res.status(500).json({ message: 'Server error' });
@@ -167,11 +230,26 @@ router.get("/:userId/personal", async (req, res) => {
   }
 });
 
-// Get all task by manager id
+// Get all personal task by manager id
 router.get("/:managerId/personal/manager", async (req, res) => {
   try {
     const { managerId } = req.params;
     const task = await getAllPersonalTasksByMyJuridiction(managerId);
+    if (!task) {
+      return res.status(404).json({ message: "Task not found" });
+    }
+    res.json(task);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: "Server error" });
+  }
+});
+
+// Get all team task by manager id
+router.get("/:managerId/team/manager", async (req, res) => {
+  try {
+    const { managerId } = req.params;
+    const task = await getAllTeamTasksByMyJuridiction(managerId);
     if (!task) {
       return res.status(404).json({ message: "Task not found" });
     }
@@ -214,6 +292,23 @@ router.put("/:id/approval", async (req, res) => {
   }
 });
 
+// Start a task
+router.put("/:userId/:taskId/start", async (req, res) => {
+  try {
+    const { userId, taskId } = req.params;
+    const start_time = req.body.start_time;
+    console.log(start_time)
+    const updatedTask = await startTask(userId, taskId, start_time);
+    if (!updatedTask) {
+      return res.status(404).json({ message: "Task not found" });
+    }
+    res.json(updatedTask);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: "Server error" });
+  }
+});
+
 // Delete a task by ID
 router.delete("/:id", async (req, res) => {
   try {
@@ -230,208 +325,3 @@ router.delete("/:id", async (req, res) => {
 });
 
 module.exports = router;
-
-// // Create a daily task
-// const upload = multer({ dest: "uploads/" });
-// router.post("/", upload.single("file"), async (req, res) => {
-//   try {
-//     const { title, description, assignee_id, standard_hours } = req.body;
-//     const file_path = req.file?.filename;
-//     const result = await DailyTask.createDailyTask(
-//       title,
-//       description,
-//       assignee_id,
-//       standard_hours,
-//       file_path
-//     );
-//     res.status(201).json(result);
-//   } catch (err) {
-//     console.error(err);
-//     res.status(500).json({ message: "Server error" });
-//   }
-// });
-
-// // Get a daily task by id
-// router.get("/:id", async (req, res) => {
-//   try {
-//     const { id } = req.params;
-//     const task = await DailyTask.getDailyTaskById(id);
-//     if (!task) {
-//       return res.status(404).json({ message: "Daily task not found" });
-//     }
-//     res.json(task);
-//   } catch (err) {
-//     console.error(err);
-//     res.status(500).json({ message: "Server error" });
-//   }
-// });
-
-// // Update a daily task by id
-// router.put("/:id", async (req, res) => {
-//   try {
-//     const { id } = req.params;
-//     const {
-//       title,
-//       description,
-//       assignee_id,
-//       start_time,
-//       end_time,
-//       pause_time,
-//       file_path,
-//       actual_hours,
-//     } = req.body;
-//     const result = await DailyTask.updateDailyTaskById(
-//       id,
-//       title,
-//       description,
-//       assignee_id,
-//       start_time,
-//       end_time,
-//       pause_time,
-//       file_path,
-//       actual_hours
-//     );
-//     if (!result) {
-//       return res.status(404).json({ message: "Daily task not found" });
-//     }
-//     res.json(result);
-//   } catch (err) {
-//     console.error(err);
-//     res.status(500).json({ message: "Server error" });
-//   }
-// });
-
-// // Delete a daily task by id
-// router.delete("/:id", async (req, res) => {
-//   try {
-//     const { id } = req.params;
-//     const result = await DailyTask.deleteDailyTaskById(id);
-//     if (!result) {
-//       return res.status(404).json({ message: "Daily task not found" });
-//     }
-//     res.json(result);
-//   } catch (err) {
-//     console.error(err);
-//     res.status(500).json({ message: "Server error" });
-//   }
-// });
-
-// // Upload a file as a reply to a daily task
-// router.post("/:id/replies", upload.single("file"), async (req, res) => {
-//   try {
-//     const { id } = req.params;
-//     const { reply_text, author_id } = req.body;
-//     const file_path = req.file?.filename;
-//     const result = await DailyTask.createDailyTaskReply(
-//       id,
-//       reply_text,
-//       author_id,
-//       file_path
-//     );
-//     res.status(201).json(result);
-//   } catch (err) {
-//     console.error(err);
-//     res.status(500).json({ message: "Server error" });
-//   }
-// });
-
-// // Download a file associated with a daily task reply
-// router.get("/replies/:id/file", async (req, res) => {
-//   try {
-//     const { id } = req.params;
-//     const reply = await DailyTask.getDailyTaskReplyById(id);
-//     if (!reply) {
-//       return res.status(404).json({ message: "Daily task reply not found" });
-//     }
-//     if (!reply.file_path) {
-//       return res
-//         .status(400)
-//         .json({ message: "File not found for this daily task reply" });
-//     }
-//     const file = path.join(__dirname, "..", "uploads", reply.file_path);
-//     res.download(file);
-//   } catch (err) {
-//     console.error(err);
-//     res.status(500).json({ message: "Server error" });
-//   }
-// });
-
-// // Create a daily task reply
-// router.post("/:task_id/replies", async (req, res) => {
-//   try {
-//     const { task_id } = req.params;
-//     const { author_id, reply_text } = req.body;
-//     const dailyTask = await DailyTask.getDailyTaskById(task_id);
-//     if (!dailyTask) {
-//       return res.status(404).json({ message: "Daily task not found" });
-//     }
-//     // File upload
-//     const file = req.file;
-//     let filePath = null;
-//     if (file) {
-//       const ext = path.extname(file.originalname);
-//       const fileName = `${uuidv4()}${ext}`;
-//       const uploadPath = path.join(__dirname, "..", "uploads", fileName);
-//       await file.mv(uploadPath);
-//       filePath = fileName;
-//     }
-//     const result = await DailyTask.createDailyTaskReply(
-//       task_id,
-//       reply_text,
-//       author_id,
-//       filePath
-//     );
-//     res.status(201).json(result);
-//   } catch (err) {
-//     console.error(err);
-//     res.status(500).json({ message: "Server error" });
-//   }
-// });
-
-// // Update a daily task reply by id
-// router.put("/replies/:id", async (req, res) => {
-//   try {
-//     const { id } = req.params;
-//     const { reply_text } = req.body;
-//     const reply = await DailyTask.getDailyTaskReplyById(id);
-//     if (!reply) {
-//       return res.status(404).json({ message: "Daily task reply not found" });
-//     } // File upload
-//     const file = req.file;
-//     let filePath = reply.file_path;
-//     if (file) {
-//       const ext = path.extname(file.originalname);
-//       const fileName = `${uuidv4()}${ext}`;
-//       const uploadPath = path.join(__dirname, "..", "uploads", fileName);
-//       await file.mv(uploadPath);
-//       filePath = fileName;
-//     }
-//     const result = await DailyTask.updateDailyTaskReplyById(
-//       id,
-//       reply_text,
-//       filePath
-//     );
-//     res.json(result);
-//   } catch (err) {
-//     console.error(err);
-//     res.status(500).json({ message: "Server error" });
-//   }
-// });
-
-// // Delete a daily task reply by id
-// router.delete("/replies/:id", async (req, res) => {
-//   try {
-//     const { id } = req.params;
-//     const reply = await DailyTask.getDailyTaskReplyById(id);
-//     if (!reply) {
-//       return res.status(404).json({ message: "Daily task reply not found" });
-//     }
-//     const result = await DailyTask.deleteDailyTaskReplyById(id);
-//     res.json(result);
-//   } catch (err) {
-//     console.error(err);
-//     res.status(500).json({ message: "Server error" });
-//   }
-// });
-
-// module.exports = router;

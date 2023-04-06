@@ -133,6 +133,41 @@ router.put('/:taskId/manager_reply', upload.single('file'), async (req, res) => 
   }
 });
 
+// Route for reply task
+router.post('/team/manager_reply', upload.single('file'), async (req, res) => {
+  try {
+    const {} = req.body;
+
+    // Create manager reply
+    const replyingTask = await replyTask(taskId, reply_comment, file);
+    if (!replyingTask) {
+      return res.status(500).json({ message: 'Failed to reply task' });
+    }
+    res.status(201).json(replyingTask);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
+// Route for reply task
+router.put('/:taskId/manager_reply', upload.single('file'), async (req, res) => {
+  try {
+    const {taskId} = req.params
+    const reply_comment = req.body.description;
+    const reply_status = req.body.status;
+    // Create task and attach file data
+    const replyingTask = await managerReplyTask(taskId, reply_comment, reply_status);
+    if (!replyingTask) {
+      return res.status(500).json({ message: 'Failed to reply task' });
+    }
+    res.status(201).json(replyingTask);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
 router.get('/download/:filename', (req, res) => {
   const { filename } = req.params;
   const filePath = path.join(__dirname, '../uploads', filename);

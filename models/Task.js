@@ -68,9 +68,9 @@ const createPersonalTask = async (task, file) => {
   try {
     const { task_name, description, due_datetime, priority, assign_to, status } = task;
     const query = `
-      INSERT INTO tbl_task (task_name, description, due_datetime, priority, assign_to, status, manager_comment, task_category)
-      VALUES ($1, $2, $3, $4, $5, $6, "OKE", "Personal")
-      RETURNING *
+    INSERT INTO tbl_task (task_name, description, due_datetime, priority, assign_to, status, manager_comment, task_category)
+    VALUES ($1, $2, $3, $4, $5, $6, 'OKE', 'Personal')
+    RETURNING *    
     `;
     const values = [task_name, description, due_datetime, priority, assign_to, status];
     const { rows } = await pool.query(query, values);

@@ -42,51 +42,7 @@ module.exports = {
     }
   },
 
-  async createKpiAssessmentWithCheck() {
-    const assessment_period_uuid = 'efe90862-5449-43a6-b6b5-ebd9b3a4fd40';
-    const client = await pool.connect();
-    try {
-      await client.query("BEGIN");
-  
-      // Get all active team members
-      const teamMembersQuery = 'SELECT id, uuid, team_id, user_id, status FROM public.tbl_team_member WHERE status = $1';
-      const teamMembersValues = ['active'];
-      const teamMembersResult = await client.query(teamMembersQuery, teamMembersValues);
-      const activeUserIds = teamMembersResult.rows.map((row) => row.user_id);
-  
-      // Get all approved assessment rubrics that haven't been applied for the given period
-      const rubricsQuery =
-        'SELECT id, uuid, uuid as rubric_id FROM public.tbl_assessment_rubric WHERE status_approval = $1 AND uuid NOT IN (SELECT rubric_id FROM public.tbl_kpi_assessment WHERE assessment_period = $2)';
-      const rubricsValues = ['approve', assessment_period_uuid];
-      const rubricsResult = await client.query(rubricsQuery, rubricsValues);
-  
-      if (activeUserIds.length === 0 || rubricsResult.rows.length === 0) {
-        throw new Error('No active team members or assessment rubrics to apply');
-      }
-  
-      // Create the KPI assessments for the assessment period and rubrics
-      for (const rubricRow of rubricsResult.rows) {
-        const newEntriesQuery =
-          'INSERT INTO public.tbl_kpi_assessment (uuid, assessment_period, score, user_id, rubric_id, assessment_duedate) VALUES ($1, $2, $3, $4, $5, $6)';
-        const newEntriesValues = activeUserIds.map((userId) => [
-          uuidv4(),
-          assessment_period_uuid,
-          0,
-          userId,
-          rubricRow.rubric_id,
-          rubricRow.criteria
-        ]);
-        await client.query(newEntriesQuery, newEntriesValues.flat());
-      }
-  
-      await client.query("COMMIT");
-    } catch (error) {
-      await client.query("ROLLBACK");
-      throw error;
-    } finally {
-      client.release();
-    }
-  },  
+
 
   async updateKpiAssessmentRubric(manager_id, team_id) {
     const query = "";

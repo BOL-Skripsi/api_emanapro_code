@@ -25,13 +25,13 @@ router.post("/period", async (req, res) => {
 router.post("/period/update", async (req, res) => {
   try {
     const kpi_period = req.body.kpi_period;
-    const result = await Kpi.createKpiAssessmentWithCheck(kpi_period);
-    if (!result) {
-      return res
-        .status(404)
-        .json({ message: "KPI assessment period update failed" });
-    }
-    res.status(201).json(result);
+    // const result = await Kpi.createKpiAssessmentWithCheck(kpi_period);
+    // if (!result) {
+    //   return res
+    //     .status(404)
+    //     .json({ message: "KPI assessment period update failed" });
+    // }
+    // res.status(201).json(result);
   } catch (err) {
     console.error(err);
     res.status(500).json({ message: "Server error" });

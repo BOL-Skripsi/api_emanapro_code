@@ -277,7 +277,22 @@ const getTaskReply = async (id) => {
   }
 };
 
-// Get task reply by ID
+// Get team task reply by ID
+const getTeamTaskReply = async (id) => {
+  const query = `
+  SELECT tr.*,(SELECT file_name FROM public.tbl_task_reply_file trf WHERE trf.task_reply_uuid::uuid = tr.uuid) AS file_name FROM public.tbl_task_reply tr WHERE tr.task_id = $1 ORDER BY tr.id
+  `;
+  const values = [id];
+  try {
+    const { rows } = await pool.query(query, values);
+    return rows;
+  } catch (err) {
+    console.error(err);
+    return null;
+  }
+};
+
+// Get task reply file by ID
 const getTaskReplyFile = async (id) => {
   const query = `
     SELECT * FROM tbl_task WHERE uuid = $1

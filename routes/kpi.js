@@ -6,8 +6,8 @@ const nodemailer = require("nodemailer");
 // Create KPI assessment due date
 router.post("/period", async (req, res) => {
   try {
-    const { kpi_duedate } = req.body;
-    const result = await Kpi.createKpiAssessmentPeriod(kpi_duedate);
+    const { kpi_period, kpi_duedate, kpi_startdate } = req.body;
+    const result = await Kpi.createKpiAssessmentPeriod(kpi_period, kpi_duedate, kpi_startdate);
     if (!result) {
       return res
         .status(404)
@@ -19,7 +19,25 @@ router.post("/period", async (req, res) => {
     res.status(500).json({ message: "Server error" });
   }
 });
-module.exports = router;
+
+
+// Create KPI assessment due date
+router.post("/period/update", async (req, res) => {
+  try {
+    const kpi_period = req.body.kpi_period;
+    const result = await Kpi.createKpiAssessmentWithCheck(kpi_period);
+    if (!result) {
+      return res
+        .status(404)
+        .json({ message: "KPI assessment period update failed" });
+    }
+    res.status(201).json(result);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: "Server error" });
+  }
+});
+
 
 // Get all KPI assessment rubric
 router.get("/", async (req, res) => {
@@ -123,3 +141,4 @@ router.post("/open/:userId/:duedateId/fill", async (req, res) => {
   }
 });
 
+module.exports = router;

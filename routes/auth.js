@@ -25,12 +25,44 @@ router.post("/login", async (req, res) => {
     }
 
     const token = jwt.sign(
-      { userId: user.id, userEmail: user.email, refresh_token: user.refresh_token },
+      {
+        userId: user.id,
+        userEmail: user.email,
+        refresh_token: user.refresh_token,
+      },
       process.env.JWT_SECRET,
       { expiresIn: "1h" }
     );
 
     res.status(200).json({ user, token });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: "Internal Server Error" });
+  }
+});
+
+router.post("/:userId/password", async (req, res) => {
+  try {
+    const userId = req.params;
+    const oldPassword = req.body.old_password;
+    const newPassword = req.body.new_password;
+    console.log(oldPassword);
+    const user = await userModel.getUserById(userId.userId);
+
+    if (!user) {
+      return res.status(401).json({ message: "Invalid user or old password" });
+    }
+    console.log(oldPassword);
+    const isMatch = await bcrypt.compare(oldPassword, user.password);
+
+    if (!isMatch) {
+      return res.status(401).json({ message: "Invalid user or old password" });
+    }
+    const salt = await bcrypt.genSalt(10);
+    const hashedPassword = await bcrypt.hash(newPassword, salt);
+    await userModel.changeUserPassword(hashedPassword, user.uuid);
+
+    res.status(200).json({ user });
   } catch (error) {
     console.error(error);
     res.status(500).json({ message: "Internal Server Error" });
@@ -54,7 +86,7 @@ router.post("/register", async (req, res) => {
     const newUser = {
       name,
       email,
-      password: hashedPassword
+      password: hashedPassword,
     };
     const createdUser = await userModel.createUser(newUser);
     console.log(createdUser);
@@ -126,7 +158,6 @@ router.post("/reset-password", async (req, res) => {
     const user = await userModel.getUserByResetPasswordToken(
       resetPasswordToken
     );
-    
 
     if (!user) {
       return res.status(400).json({ message: "Invalid reset password token" });

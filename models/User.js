@@ -18,6 +18,21 @@ module.exports = {
     return result.rows[0];
   },
 
+  async getUserById(userId) {
+    const result = await pool.query("SELECT * FROM tbl_user WHERE uuid = $1", [
+      userId,
+    ]);
+    return result.rows[0];
+  },
+
+  
+  async changeUserPassword(password, userId) {
+    await pool.query("UPDATE tbl_user SET password = $1, change_password='1' WHERE uuid = $2", [
+      password,
+      userId,
+    ]);
+  },
+
   async getAllUser() {
     const result = await pool.query("SELECT u.uuid, u.name as user_name, u.email, t.name as team_name, tm.user_id as team_manager_id, tm.id as team_member_id, m.name as manager_name, org.organization_role FROM public.tbl_user u LEFT JOIN public.tbl_team_member tm ON u.uuid = tm.user_id::uuid LEFT JOIN public.tbl_team t ON tm.team_id::uuid = t.uuid::uuid LEFT JOIN public.tbl_user m ON t.manager_id::uuid = m.uuid::uuid LEFT JOIN public.organization_roles org ON u.uuid = org.user_id::uuid WHERE NOT org.organization_role = 'owner'");
     return result.rows;

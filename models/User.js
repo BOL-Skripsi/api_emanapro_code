@@ -140,7 +140,7 @@ module.exports = {
       "SELECT role FROM organization_roles WHERE user_id = $1 AND organization_id = $2",
       [userId, organizationId]
     );
-    return result.rows[0]?.role;
+    return result.rows[0].role;
   },
 
   async assignOrganizationRole(userId, organizationId, role) {
@@ -182,7 +182,7 @@ module.exports = {
       "SELECT role FROM team_roles WHERE user_id = $1 AND team_id = $2",
       [userId, teamId]
     );
-    return result.rows[0]?.role;
+    return result.rows[0].role;
   },
 
   async assignTeamRole(userId, teamId, role) {

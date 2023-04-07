@@ -7,7 +7,9 @@ const nodemailer = require("nodemailer");
 router.post("/period", async (req, res) => {
   try {
     const { kpi_period, kpi_duedate, kpi_startdate } = req.body;
+    console.log(req.body);
     const result = await Kpi.createKpiAssessmentPeriod(kpi_period, kpi_duedate, kpi_startdate);
+    console.log(result);
     if (!result) {
       return res
         .status(404)
@@ -71,9 +73,10 @@ router.get("/kpi_team_member/:teamId", async (req, res) => {
 });
 
 // Get all open KPI Assessment for manager
-router.get("/open/", async (req, res) => {
+router.get("/open/:manager_id", async (req, res) => {
   try {
-    const result = await Kpi.getKpiAssessmentOpebByMember();
+    const manager_id = req.params.manager_id;
+    const result = await Kpi.getKpiAssessmentOpebByMember(manager_id);
     if (!result) {
       return res
         .status(404)
@@ -151,6 +154,42 @@ router.post("/open/:userId/:duedateId/fill", async (req, res) => {
       return res
         .status(404)
         .json({ message: "KPI assessment member data tidak ada" });
+    }
+    res.json(result);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: "Server error" });
+  }
+});
+
+
+router.post("/assessment/:assessmentId", async (req, res) => {
+  try {
+    const score = req.body.score;
+    const uraian = req.body.uraian;
+    const assessmentId = req.params.assessmentId;
+    const result = await Kpi.kpiAssessmentScore(assessmentId, score, uraian);
+    if (!result) {
+      return res
+        .status(404)
+        .json({ message: "Data KPI assessment tidak ada" });
+    }
+    res.json(result);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: "Server error" });
+  }
+});
+
+router.post("/assessment/:assessmentId/change_score", async (req, res) => {
+  try {
+    const score = req.body.score;
+    const assessmentId = req.params.assessmentId;
+    const result = await Kpi.kpiAssessmentChangeScore(assessmentId, score);
+    if (!result) {
+      return res
+        .status(404)
+        .json({ message: "Data KPI assessment tidak ada" });
     }
     res.json(result);
   } catch (err) {

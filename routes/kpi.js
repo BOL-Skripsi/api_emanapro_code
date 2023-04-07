@@ -103,6 +103,24 @@ router.get("/open/:userId/:duedateId/list", async (req, res) => {
     res.status(500).json({ message: "Server error" });
   }
 });
+// Get all open KPI Assessment for manager on certain user and duedate
+router.get("/open/:userId/:duedateId/:category/list", async (req, res) => {
+  try {
+    const userId = req.params.userId;
+    const duedateId = req.params.duedateId;
+    const category = req.params.category;
+    const result = await Kpi.getKpiAssessmentForm(userId, duedateId, category);
+    if (!result) {
+      return res
+        .status(404)
+        .json({ message: "KPI assessment member data tidak ada" });
+    }
+    res.json(result);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: "Server error" });
+  }
+});
 
 // Get all open KPI Assessment for manager on certain user and duedate
 router.get("/open/:userId/:duedateId/:category/form", async (req, res) => {

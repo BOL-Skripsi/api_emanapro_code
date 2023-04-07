@@ -21,10 +21,10 @@ module.exports = {
         assessmentPeriodValues
       );
       const assessmentRubricQuery =
-        "INSERT INTO tbl_kpi_assessment (uuid, assessment_period, score, user_id, rubric_id, assessment_duedate) SELECT uuid_generate_v4(), $1, 0, tm.user_id, ar.uuid, $2 FROM public.tbl_team_member tm JOIN public.tbl_assessment_rubric ar ON tm.team_id = ar.team_id WHERE tm.status = $3 AND ar.status_approval = $4 RETURNING *";
+        "INSERT INTO tbl_kpi_assessment (assessment_period, user_id, rubric_id, assessment_duedate) SELECT  $1, tm.user_id, ar.uuid, $2 FROM public.tbl_team_member tm JOIN public.tbl_assessment_rubric ar ON tm.team_id = ar.team_id WHERE tm.status = $3 AND ar.status_approval = $4 RETURNING *";
       const assessmentRubricValues = [
+        kpi_period,
         assessmentPeriodResult.rows[0].uuid,
-        kpi_duedate,
         "active",
         "approve",
       ];
@@ -42,8 +42,6 @@ module.exports = {
     }
   },
 
-
-
   async updateKpiAssessmentRubric(manager_id, team_id) {
     const query = "";
     const values = [manager_id, team_id];
@@ -59,8 +57,40 @@ module.exports = {
   },
 
   async getKpiAssessmentDataByMember(team_id) {
-    const query =
-      "SELECT tm.team_id, tm.user_id, u.name, count(ar.id) AS num_rubric_assessments, COUNT(ka.id) AS num_assessments_with_score FROM public.tbl_team_member tm JOIN public.tbl_user u ON tm.user_id::uuid = u.uuid LEFT JOIN public.tbl_assessment_rubric ar ON tm.team_id::uuid = ar.team_id::uuid LEFT JOIN public.tbl_kpi_assessment ka ON ar.uuid = ka.rubric_id::uuid AND ka.score IS NOT NULL WHERE tm.team_id::uuid = $1 GROUP BY tm.team_id, tm.user_id, u.name";
+    const query = `
+    SELECT 
+    u.name AS user_name,
+    tm.user_id AS team_member, 
+    COALESCE(assessment_count, 0) AS assessment_count, 
+    COALESCE(rubric_count, 0) AS rubric_count
+FROM 
+    public.tbl_team_member tm 
+    LEFT JOIN (
+        SELECT 
+            user_id, 
+            COUNT(*) AS assessment_count 
+        FROM 
+            public.tbl_kpi_assessment 
+        WHERE 
+            score IS NOT NULL AND score != 0 
+        GROUP BY 
+            user_id
+    ) ka ON tm.user_id = ka.user_id 
+    LEFT JOIN (
+        SELECT 
+            team_id, 
+            COUNT(DISTINCT id) AS rubric_count 
+        FROM 
+            public.tbl_assessment_rubric 
+        GROUP BY 
+            team_id
+    ) ar ON tm.team_id = ar.team_id 
+    INNER JOIN public.tbl_user u ON tm.user_id::uuid = u.uuid
+WHERE 
+    tm.team_id = $1
+ORDER BY 
+    user_name
+      `;
     const values = [team_id];
     const result = await pool.query(query, values);
     return result.rows;

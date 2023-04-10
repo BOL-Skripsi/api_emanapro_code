@@ -25,6 +25,7 @@ const taskRoutes = require("./routes/task");
 const teamRoutes = require("./routes/team");
 const rubricRoutes = require("./routes/rubric");
 const kpiRoutes = require("./routes/kpi");
+const dashboardRoutes = require("./routes/dashboard");
 // const teamRoutes = require("./routes/team");
 // const kpiRoutes = require("./routes/kpi");
 
@@ -56,6 +57,7 @@ app.use("/task", taskRoutes);
 app.use("/team", teamRoutes);
 app.use("/rubric", rubricRoutes);
 app.use("/kpi", kpiRoutes);
+app.use("/dashboard", dashboardRoutes);
 // app.use("/team", authenticateToken, requireAuth, teamRoutes);
 // app.use("/kpi", authenticateToken, requireAuth, kpiRoutes);
 

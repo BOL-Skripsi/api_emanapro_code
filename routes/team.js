@@ -26,9 +26,10 @@ router.post("/:orgId", async (req, res) => {
 });
 
 // Get all teams of an organization
-router.get("/:orgId/list", async (req, res) => {
+router.get("/:orgId/:manId/list", async (req, res) => {
   try {
     const orgId = req.params.orgId;
+    const manId = req.params.manId;
 
     const organization = await organizationModel.getOrganizationById(orgId);
 
@@ -36,7 +37,7 @@ router.get("/:orgId/list", async (req, res) => {
       return res.status(404).json({ message: "Organization not found" });
     }
 
-    const teams = await teamModel.getAllTeamsByOrgId(orgId);
+    const teams = await teamModel.getAllTeamsByOrgId(orgId, manId);
 
     res.status(200).json({ teams });
   } catch (error) {
@@ -44,6 +45,7 @@ router.get("/:orgId/list", async (req, res) => {
     res.status(500).json({ message: "Internal Server Error" });
   }
 });
+
 
 // Get all teams of an organization
 router.get("/:orgId/:manId/rubric", async (req, res) => {
@@ -80,7 +82,7 @@ router.get("/avaliable", async (req, res) => {
 });
 
 // Get all avaliable Team Member
-router.get("/:teamId/member/list", async (req, res) => {
+router.get("/:teamId/:orgId/member/list", async (req, res) => {
   try {
     const teamId = req.params.teamId;
     const teams = await teamModel.getAllTeamMember(teamId);
@@ -103,19 +105,6 @@ router.get('/:managerId/myjuridiction', async (req, res) => {
   } catch (err) {
     console.error(err);
     res.status(500).json({ message: "Server error" });
-  }
-});
-
-// Get all avaliable Team Member
-router.get("/:team_id/member/list", async (req, res) => {
-  try {
-    const teamId = req.params.team_id;
-    const teams = await teamModel.getAllTeamMember(teamId);
-
-    res.status(200).json({ teams });
-  } catch (error) {
-    console.error(error);
-    res.status(500).json({ message: "Internal Server Error" });
   }
 });
 

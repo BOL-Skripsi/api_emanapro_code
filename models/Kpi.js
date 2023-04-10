@@ -190,6 +190,29 @@ ORDER BY
     return result.rows;
   },
 
+  async getKpiAssessmentDataByUser(user_id) {
+    const query = `SELECT kpi.id, kpi.uuid, kpi.assessment_period, kpi.score, kpi.user_id, kpi.rubric_id, kpi.assessment_duedate, kpi.uraian_kinerja, 
+    rubric.team_id, rubric.order_rubric, rubric.performance_metric, rubric.criteria, rubric.weight, rubric.score_system, 
+    rubric.data_source, rubric.feedback_and_improvement, rubric.status_approval, rubric.category, rubric.description 
+    FROM public.tbl_kpi_assessment kpi 
+    JOIN public.tbl_assessment_rubric rubric 
+    ON kpi.rubric_id::uuid = rubric.uuid
+    WHERE kpi.user_id = $1
+    ORDER BY rubric.category
+      `;
+    const values = [user_id];
+    const result = await pool.query(query, values);
+    return result.rows;
+  },
+
+  async getKpiPeriod() {
+    const query = `SELECT id, uuid, kpi_period, kpi_startdate, kpi_duedate
+    FROM public.tbl_kpi_assessment_period;
+      `;
+    const result = await pool.query(query);
+    return result.rows;
+  },
+
   async getKpiAssessmentOpebByMember(manager_id) {
     const query = `
     SELECT u.uuid AS user_id, tbl_user.name AS user_name, t.name AS team_name, 

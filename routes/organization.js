@@ -82,6 +82,7 @@ router.post("/:id/invite/:role", async (req, res) => {
     // Send email invitations
     const transporter = nodemailer.createTransport({
       host: "smtp.gmail.com",
+      name: "apps.emanapro.com",
       port: 587,
       secure: false,
       auth: {
@@ -94,7 +95,7 @@ router.post("/:id/invite/:role", async (req, res) => {
       const mailOptions = {
         from: process.env.GMAIL_USER,
         to: user.email,
-        subject: `Invitation to ${role} role`,
+        subject: `Invitation to ${role} role | e-Manapro`,
         text: `Hi ${name},\n\nYou have been invited to join the ${role} role for the ${organization.name} organization.\n\nYour temporary password is \n\npassword : ${password}. \n\nPlease login to your account to accept the invitation and change your password.\n\nThank you!`,
       };
       return transporter.sendMail(mailOptions);

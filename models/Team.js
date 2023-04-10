@@ -19,15 +19,16 @@ module.exports = {
     return result.rows[0];
   },
 
-  async getAllTeamsByOrgId(orgId) {
+  async getAllTeamsByOrgId(orgId, manId) {
     const query = {
-      text: "SELECT id, uuid, name, description, manager_id, organization_id, (SELECT name FROM public.tbl_user WHERE manager_id::UUID = tbl_user.uuid ) AS manager_name, (SELECT COUNT(*) FROM public.tbl_team_member WHERE team_id::UUID = tbl_team.uuid) AS team_member_count FROM public.tbl_team WHERE organization_id = $1",
-      values: [orgId],
+      text: "SELECT id, uuid, name, description, manager_id, organization_id, (SELECT name FROM public.tbl_user WHERE manager_id::UUID = tbl_user.uuid ) AS manager_name, (SELECT COUNT(*) FROM public.tbl_team_member WHERE team_id::UUID = tbl_team.uuid) AS team_member_count FROM public.tbl_team WHERE organization_id = $1 AND manager_id = $2",
+      values: [orgId, manId],
     };
 
     const result = await pool.query(query);
     return result.rows;
   },
+  
 
   async getAllTeamsForRubricByManagerId(orgId, manId) {
     const query = {
@@ -76,22 +77,13 @@ ORDER BY t.id
     return result.rows;
   },
 
-  async getAllTeamMember(teamId) {
-    const query = {
-      text: "SELECT tm.id, tm.uuid, tm.team_id, tm.user_id, u.name, u.email, u.password, u.refresh_token, u.reset_password_token, u.reset_password_token_expires, u.status FROM public.tbl_team_member tm JOIN public.tbl_user u ON tm.user_id::uuid = u.uuid WHERE tm.team_id = $1",
-      values: [teamId],
-    };
-
-    const result = await pool.query(query);
-    return result.rows;
-  },
 
   async getAllTeamMember(teamId) {
+    console.log(teamId);
     const query = {
-      text: "SELECT u.uuid as user_id, u.name, u.email, COUNT(t.id) AS completed_tasks FROM public.tbl_team_member tm INNER JOIN public.tbl_user u ON tm.user_id::uuid = u.uuid LEFT JOIN public.tbl_task t ON t.assign_to::uuid = u.uuid AND t.status = 'complete' WHERE tm.team_id = $1 GROUP BY u.id, u.name, u.email",
+      text: "SELECT u.uuid as user_id, u.name, u.email FROM public.tbl_team_member tm INNER JOIN public.tbl_user u ON tm.user_id::uuid = u.uuid WHERE tm.team_id = $1 GROUP BY u.id, u.name, u.email",
       values: [teamId],
     };
-
     const result = await pool.query(query);
     return result.rows;
   },

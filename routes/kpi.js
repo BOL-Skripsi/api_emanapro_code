@@ -22,6 +22,20 @@ router.post("/period", async (req, res) => {
   }
 });
 
+router.get("/period", async (req, res) => {
+  try {
+    const result = await Kpi.getKpiPeriod();
+    if (!result) {
+      return res.status(404).json({ message: "KPI Period tidak ada" });
+    }
+    res.json(result);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: "Server error" });
+  }
+});
+
+
 
 // Create KPI assessment due date
 router.post("/period/update", async (req, res) => {
@@ -190,6 +204,22 @@ router.post("/assessment/:assessmentId/change_score", async (req, res) => {
       return res
         .status(404)
         .json({ message: "Data KPI assessment tidak ada" });
+    }
+    res.json(result);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: "Server error" });
+  }
+});
+
+router.get("/assessment/:userId/detail", async (req, res) => {
+  try {
+    const { userId } = req.params;
+    const result = await Kpi.getKpiAssessmentDataByUser(userId);
+    if (!result) {
+      return res
+        .status(404)
+        .json({ message: "KPI assessment user data tidak ada" });
     }
     res.json(result);
   } catch (err) {

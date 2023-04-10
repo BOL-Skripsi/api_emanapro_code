@@ -49,7 +49,6 @@ module.exports = {
     return result.rows[0];
   },
 
-  
   async kpiAssessmentChangeScore(assessmentId, score) {
     const query =
       "UPDATE tbl_kpi_assessment SET score = $2 WHERE uuid = $1 RETURNING *";
@@ -66,8 +65,66 @@ module.exports = {
   },
 
   async getKpiAssessmentData() {
-    const query =
-      "SELECT t.id, t.name, t.uuid as team_uuid, u.name AS manager_name, COUNT(DISTINCT tm.user_id) AS num_members, COALESCE(q.num_assessed, 0) AS num_assessed, p.kpi_duedate FROM public.tbl_team t LEFT JOIN public.tbl_team_member tm ON t.uuid = tm.team_id::uuid LEFT JOIN public.tbl_user u ON t.manager_id::uuid = u.uuid LEFT JOIN ( SELECT tm.team_id, COUNT(DISTINCT ka.user_id) AS num_assessed FROM public.tbl_kpi_assessment ka JOIN public.tbl_team_member tm ON tm.user_id::uuid = ka.user_id::uuid WHERE ka.score IS NOT NULL GROUP BY tm.team_id ) q ON t.uuid = q.team_id::uuid LEFT JOIN public.tbl_kpi_assessment_period p ON true GROUP BY t.id, t.name, u.name, q.num_assessed, p.kpi_duedate ORDER BY p.kpi_duedate DESC, t.name, u.name";
+    const query = `
+      SELECT 
+    t.id, 
+    t.name, 
+    t.uuid AS team_uuid, 
+    u.name AS manager_name, 
+    COUNT(DISTINCT tm.user_id) AS num_members, 
+    COALESCE(q.num_assessed, 0) AS num_assessed, 
+    p.kpi_duedate, 
+    k.id, 
+    k.uuid, 
+    k.kpi_period, 
+    k.kpi_startdate,
+    ROUND(SUM(ka.score * ar.weight) / SUM(ar.weight), 2) AS final_score
+FROM 
+    public.tbl_team t 
+LEFT JOIN 
+    public.tbl_team_member tm ON t.uuid = tm.team_id::uuid 
+LEFT JOIN 
+    public.tbl_user u ON t.manager_id::uuid = u.uuid 
+LEFT JOIN 
+    (
+        SELECT 
+            tm.team_id, 
+            COUNT(DISTINCT ka.user_id) AS num_assessed 
+        FROM 
+            public.tbl_kpi_assessment ka 
+        JOIN 
+            public.tbl_team_member tm ON tm.user_id::uuid = ka.user_id::uuid 
+        WHERE 
+            ka.score IS NOT NULL 
+        GROUP BY 
+            tm.team_id
+    ) q ON t.uuid = q.team_id::uuid 
+LEFT JOIN 
+    public.tbl_kpi_assessment_period p ON true 
+LEFT JOIN 
+    public.tbl_kpi_assessment_period k ON k.kpi_duedate = p.kpi_duedate 
+LEFT JOIN 
+    public.tbl_kpi_assessment ka ON ka.assessment_duedate::uuid = k.uuid 
+LEFT JOIN 
+    public.tbl_assessment_rubric ar ON ka.rubric_id::uuid = ar.uuid 
+GROUP BY 
+    t.id, 
+    t.name, 
+    u.name, 
+    q.num_assessed, 
+    p.kpi_duedate, 
+    k.id, 
+    k.uuid, 
+    k.kpi_period, 
+    k.kpi_startdate, 
+    t.uuid, 
+    manager_name 
+ORDER BY 
+    p.kpi_duedate DESC, 
+    t.name, 
+    u.name;
+
+      `;
     const result = await pool.query(query);
     return result.rows;
   },
@@ -77,33 +134,54 @@ module.exports = {
     SELECT 
     u.name AS user_name,
     tm.user_id AS team_member, 
-    COALESCE(assessment_count, 0) AS assessment_count, 
-    COALESCE(rubric_count, 0) AS rubric_count
+    COALESCE(SUM(assessment_count), 0) AS assessment_count, 
+    COALESCE(SUM(rubric_count), 0) AS rubric_count,
+    ROUND(SUM(ka2.final_score * ar.weight) / SUM(ar.weight), 2) AS final_score
 FROM 
     public.tbl_team_member tm 
     LEFT JOIN (
         SELECT 
             user_id, 
+            rubric_id, 
+            score,
             COUNT(*) AS assessment_count 
         FROM 
             public.tbl_kpi_assessment 
         WHERE 
             score IS NOT NULL AND score != 0 
         GROUP BY 
-            user_id
+            user_id, rubric_id, score
     ) ka ON tm.user_id = ka.user_id 
     LEFT JOIN (
         SELECT 
             team_id, 
+			uuid, 
+			weight,
             COUNT(DISTINCT id) AS rubric_count 
         FROM 
             public.tbl_assessment_rubric 
         GROUP BY 
-            team_id
-    ) ar ON tm.team_id = ar.team_id 
+            team_id, uuid, weight
+    ) ar ON tm.team_id = ar.team_id AND ka.rubric_id::uuid = ar.uuid 
+    LEFT JOIN (
+        SELECT 
+            user_id, 
+            ROUND(SUM(score * weight) / SUM(weight), 2) AS final_score,
+            rubric_id
+        FROM 
+            public.tbl_kpi_assessment ka
+            INNER JOIN public.tbl_assessment_rubric ar ON ka.rubric_id::uuid = ar.uuid
+        WHERE 
+            ka.score IS NOT NULL AND ka.score != 0 
+        GROUP BY 
+            user_id, rubric_id
+    ) ka2 ON tm.user_id = ka2.user_id AND ar.uuid = ka2.rubric_id::uuid
     INNER JOIN public.tbl_user u ON tm.user_id::uuid = u.uuid
-WHERE 
+
+    WHERE 
     tm.team_id = $1
+GROUP BY
+    u.name, tm.user_id, assessment_count, rubric_count
 ORDER BY 
     user_name
       `;
@@ -130,7 +208,7 @@ ORDER BY
   JOIN public.tbl_user tbl_user ON u.uuid = tbl_user.uuid
   WHERE t.manager_id = $1
   GROUP BY u.uuid, tbl_user.name, t.name, kap.kpi_duedate, kap.uuid, kap.kpi_period;
-      `
+      `;
     const values = [manager_id];
     const result = await pool.query(query, values);
     return result.rows;

@@ -31,7 +31,7 @@ router.post("/login", async (req, res) => {
         refresh_token: user.refresh_token,
       },
       process.env.JWT_SECRET,
-      { expiresIn: "1h" }
+      { expiresIn: "2h" }
     );
 
     res.status(200).json({ user, token });

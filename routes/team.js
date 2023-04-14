@@ -3,7 +3,15 @@ const router = express.Router();
 const { requireRole } = require("../middleware/authenticateToken");
 const teamModel = require("../models/Team");
 const organizationModel = require("../models/Organization");
+const Pusher = require('pusher');
 
+const pusher = new Pusher({
+  appId: process.env.APP_ID,
+  key: process.env.APP_KEY,
+  secret: process.env.APP_SECRET,
+  cluster: process.env.APP_CLUSTER,
+  useTLS: true
+});
 // Create a new team
 router.post("/:orgId", async (req, res) => {
   try {
@@ -30,12 +38,6 @@ router.get("/:orgId/:manId/list", async (req, res) => {
   try {
     const orgId = req.params.orgId;
     const manId = req.params.manId;
-
-    const organization = await organizationModel.getOrganizationById(orgId);
-
-    if (!organization) {
-      return res.status(404).json({ message: "Organization not found" });
-    }
 
     const teams = await teamModel.getAllTeamsByOrgId(orgId, manId);
 

@@ -236,8 +236,75 @@ const getAllPersonalTasksByMyJuridiction = async (managerId) => {
 
 // Get all team tasks under manager juridiction
 const getAllTeamTasksByMyJuridiction = async (managerId) => {
-  const query = `SELECT CASE WHEN COUNT(DISTINCT public.tbl_user.uuid) = 1 THEN 'Team ' || MAX(public.tbl_team.name) ELSE 'Team ' || string_agg(DISTINCT public.tbl_user.name, ', ') END AS team_name, string_agg(DISTINCT public.tbl_user.name, ', ') AS assign_to, public.tbl_task.task_name, public.tbl_task.description, public.tbl_task.due_datetime, public.tbl_task.priority, CASE WHEN task_files.attachment_name IS NOT NULL THEN 'Yes' ELSE 'No' END AS attachment, public.tbl_task.status, COALESCE(last_reply.reply_status, 'Not Started') AS last_reply_status, task_files.attachment_name FROM public.tbl_task LEFT JOIN (SELECT task_id::uuid, string_agg(DISTINCT file_name, ', ') AS attachment_name FROM public.tbl_task_file GROUP BY task_id::uuid) AS task_files ON public.tbl_task.uuid = task_files.task_id LEFT JOIN public.tbl_user ON public.tbl_task.assign_to::uuid = public.tbl_user.uuid LEFT JOIN public.tbl_team ON public.tbl_task.team_id::uuid = public.tbl_team.uuid LEFT JOIN (SELECT DISTINCT ON (task_id::uuid) task_id::uuid, COALESCE(reply_status, 'Need Review') AS reply_status FROM public.tbl_task_reply ORDER BY task_id::uuid, reply_date_time DESC) last_reply ON public.tbl_task.uuid = last_reply.task_id::uuid WHERE public.tbl_task.task_category = 'Team' AND public.tbl_team.manager_id = $1 GROUP BY public.tbl_task.task_name, public.tbl_task.description, public.tbl_task.due_datetime, public.tbl_task.priority, public.tbl_task.status, task_files.attachment_name, last_reply.reply_status`;
+  const query = `
+  SELECT 
+  CASE WHEN COUNT(DISTINCT public.tbl_user.uuid) = 1 THEN 'Team ' || MAX(public.tbl_team.name) ELSE 'Team ' || string_agg(DISTINCT public.tbl_user.name, ', ') END AS team_name, 
+  string_agg(DISTINCT public.tbl_user.name, ', ') AS assign_to, 
+  string_agg(DISTINCT public.tbl_task.uuid::text, ', ') AS assign_to_uuid, 
+  public.tbl_task.task_name, 
+  public.tbl_task.description, 
+  public.tbl_task.due_datetime, 
+  public.tbl_task.priority, 
+  CASE WHEN task_files.attachment_name IS NOT NULL THEN 'Yes' ELSE 'No' END AS attachment, 
+  public.tbl_task.status, 
+  COALESCE(last_reply.reply_status, 'Not Started') AS last_reply_status, 
+  task_files.attachment_name 
+FROM 
+  public.tbl_task 
+  LEFT JOIN (
+    SELECT task_id::uuid, string_agg(DISTINCT file_name, ', ') AS attachment_name 
+    FROM public.tbl_task_file 
+    GROUP BY task_id::uuid
+  ) AS task_files ON public.tbl_task.uuid = task_files.task_id 
+  LEFT JOIN public.tbl_user ON public.tbl_task.assign_to::uuid = public.tbl_user.uuid 
+  LEFT JOIN public.tbl_team ON public.tbl_task.team_id::uuid = public.tbl_team.uuid 
+  LEFT JOIN (
+    SELECT DISTINCT ON (task_id::uuid) task_id::uuid, COALESCE(reply_status, 'Need Review') AS reply_status 
+    FROM public.tbl_task_reply 
+    ORDER BY task_id::uuid, reply_date_time DESC
+  ) last_reply ON public.tbl_task.uuid = last_reply.task_id::uuid
+   
+WHERE 
+public.tbl_task.task_category = 'Team' 
+AND public.tbl_team.manager_id = $1 
+
+GROUP BY 
+  public.tbl_task.task_name, 
+  public.tbl_task.description, 
+  public.tbl_task.due_datetime, 
+  public.tbl_task.priority, 
+  public.tbl_task.status, 
+  task_files.attachment_name, 
+  last_reply.reply_status;`;
   const value = [managerId];
+  try {
+    const { rows } = await pool.query(query, value);
+    return rows;
+  } catch (err) {
+    console.error(err);
+    return null;
+  }
+};
+
+// Get all team tasks by id
+const getTeamTaskByUserId = async (userId) => {
+  const query = `SELECT tsk.*, 
+  CASE WHEN tf.file_name IS NOT NULL THEN 'yes' ELSE 'no' END AS has_attachment,
+  CASE WHEN tsk.start_time IS NOT NULL AND last_reply.reply_status IS NULL THEN 'Has Not Reply' ELSE COALESCE(last_reply.reply_status, 'Not Started') END AS last_reply_status
+FROM public.tbl_team_member tm 
+  LEFT JOIN public.tbl_team t ON tm.team_id::uuid = t.uuid 
+  LEFT JOIN public.tbl_user u ON tm.user_id::uuid = u.uuid
+  LEFT JOIN public.tbl_task tsk ON u.uuid = tsk.assign_to::uuid 
+  LEFT JOIN public.tbl_task_file tf ON tsk.uuid = tf.task_id::uuid 
+  LEFT JOIN (
+      SELECT DISTINCT ON (task_id::uuid) task_id::uuid, COALESCE(reply_status, 'Under Review') AS reply_status 
+      FROM public.tbl_task_reply 
+      ORDER BY task_id::uuid, reply_date_time DESC
+  ) last_reply ON tsk.uuid = last_reply.task_id::uuid 
+WHERE tsk.task_category = 'Team' 
+  AND assign_to = $1;
+`;
+  const value = [userId];
   try {
     const { rows } = await pool.query(query, value);
     return rows;
@@ -277,12 +344,64 @@ const getTaskReply = async (id) => {
   }
 };
 
-// Get team task reply by ID
-const getTeamTaskReply = async (id) => {
+// Get team task reply
+const getTeamTaskReply = async (task_name, description, due_datetime) => {
   const query = `
-  SELECT tr.*,(SELECT file_name FROM public.tbl_task_reply_file trf WHERE trf.task_reply_uuid::uuid = tr.uuid) AS file_name FROM public.tbl_task_reply tr WHERE tr.task_id = $1 ORDER BY tr.id
+  SELECT 
+  tr.*, 
+  trf.file_name, 
+  t.id as task_id, 
+  t.uuid as task_uuid, 
+  t.task_name, 
+  t.description as task_description, 
+  t.assign_to, 
+  u.name as assigned_to_name, 
+  t.task_category, 
+  t.score as task_score, 
+  t.revision_comment as task_revision_comment, 
+  t.status as task_status, 
+  t.team_id, 
+  t.priority, 
+  t.due_datetime as task_duedate, 
+  t.start_time, 
+  t.manager_comment
+FROM 
+  public.tbl_task_reply tr
+  LEFT JOIN public.tbl_task_reply_file trf ON trf.task_reply_uuid::uuid = tr.uuid
+  INNER JOIN public.tbl_task t ON tr.task_id::uuid = t.uuid
+  INNER JOIN public.tbl_user u ON t.assign_to::uuid = u.uuid
+WHERE 
+  t.task_name = $1 AND t.description = $2 AND t.due_datetime = $3
+ORDER BY 
+  tr.id;
+
   `;
-  const values = [id];
+  const values = [task_name, description, due_datetime];
+  console.log(values);
+  try {
+    const { rows } = await pool.query(query, values);
+    return rows;
+  } catch (err) {
+    console.error(err);
+    return null;
+  }
+};
+
+// Get team task similiarity
+const getTeamTaskBySimiliarity = async (task_name, task_description, task_category, task_duedate) => {
+  const query = `
+  SELECT 
+    t.id, t.uuid, t.task_name, t.description, t.assign_to, t.task_category, t.score, 
+    t.revision_comment, t.status, t.team_id, t.priority, t.due_datetime, t.start_time, 
+    t.manager_comment, u.name as assigned_to_name
+FROM 
+    public.tbl_task t
+    INNER JOIN public.tbl_user u ON t.assign_to::uuid = u.uuid
+	
+WHERE 
+    t.task_name = $1 AND t.description = $2 AND t.task_category = $3 AND t.due_datetime = $4;
+  `;
+  const values = [task_name, task_description, task_category, task_duedate];
   try {
     const { rows } = await pool.query(query, values);
     return rows;
@@ -334,6 +453,8 @@ WHERE tsk.task_category = 'Personal'
     return null;
   }
 };
+
+
 
 // Get a task file by task id
 const getTaskFileById = async (id) => {
@@ -472,5 +593,8 @@ module.exports = {
   startTask,
   replyTask,
   managerReplyTask,
-  getAllTeamTasksByMyJuridiction
+  getAllTeamTasksByMyJuridiction,
+  getTeamTaskByUserId,
+  getTeamTaskBySimiliarity,
+  getTeamTaskReply
 };

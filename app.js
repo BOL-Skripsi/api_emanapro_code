@@ -52,7 +52,7 @@ const requireAuth = (req, res, next) => {
 // Routes
 app.use("/auth", authRoutes);
 app.use("/product", authenticateToken, requireAuth, productRoutes);
-app.use("/organization", authenticateToken, requireAuth, organizationRoutes);
+app.use("/organization", organizationRoutes);
 app.use("/task", taskRoutes);
 app.use("/team", teamRoutes);
 app.use("/rubric", rubricRoutes);

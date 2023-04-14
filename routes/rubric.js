@@ -1,7 +1,15 @@
 const express = require("express");
 const router = express.Router();
 const KpiAssessmentRubric = require("../models/Rubric");
+const Pusher = require('pusher');
 
+const pusher = new Pusher({
+  appId: process.env.APP_ID,
+  key: process.env.APP_KEY,
+  secret: process.env.APP_SECRET,
+  cluster: process.env.APP_CLUSTER,
+  useTLS: true
+});
 
 // Get all KPI assessment rubric
 router.get("/", async (req, res) => {

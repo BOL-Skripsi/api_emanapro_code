@@ -88,9 +88,24 @@ router.get("/manager/kpi/:userId", async (req, res) => {
   }
 });
 
+router.get("/manager/task/:userId", async (req, res) => {
+  try {
+    const userId = req.params.userId;
+    const result = await Dashboard.getManagerTaskApprove(userId);
+    if (!result) {
+      return res.status(404).json({ message: "task data tidak ada" });
+    }
+    res.json(result);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: "Server error" });
+  }
+});
+
 router.get("/manager/assessment/:userId", async (req, res) => {
   try {
-    const result = await Dashboard.getHrdRubricToReview();
+    const userId = req.params.userId;
+    const result = await Dashboard.getManagerAssessmentProgress(userId);
     if (!result) {
       return res.status(404).json({ message: "KPI assessment data tidak ada" });
     }

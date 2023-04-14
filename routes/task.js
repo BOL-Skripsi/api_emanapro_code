@@ -22,9 +22,20 @@ const {
   startTask,
   replyTask,
   managerReplyTask,
-  getAllTeamTasksByMyJuridiction
+  getAllTeamTasksByMyJuridiction,
+  getTeamTaskByUserId,
+  getTeamTaskBySimiliarity,
+  getTeamTaskReply
 } = require("../models/Task");
+const Pusher = require('pusher');
 
+const pusher = new Pusher({
+  appId: process.env.APP_ID,
+  key: process.env.APP_KEY,
+  secret: process.env.APP_SECRET,
+  cluster: process.env.APP_CLUSTER,
+  useTLS: true
+});
 // Create a task
 router.post("/", async (req, res) => {
   try {
@@ -191,10 +202,27 @@ router.get("/", async (req, res) => {
 });
 
 // Get all tasks by team id
-router.get("/:teamId/team", async (req, res) => {
+router.get("/:userId/team", async (req, res) => {
   try {
-    const { teamId } = req.params;
-    const tasks = await getAllTasksByTeamId(teamId);
+    const { userId } = req.params;
+    const tasks = await getTeamTaskByUserId(userId);
+    if (!tasks) {
+      return res.status(404).json({ message: "No tasks found" });
+    }
+    res.json(tasks);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: "Server error" });
+  }
+});
+
+// Get all tasks by similiarity
+router.post("/:userId/team/detail", async (req, res) => {
+  try {
+    const { userId } = req.params;
+    const {task_name, task_description, task_category, task_duedate} = req.body;
+    console.log(req.body);
+    const tasks = await getTeamTaskBySimiliarity(task_name, task_description, task_category, task_duedate);
     if (!tasks) {
       return res.status(404).json({ message: "No tasks found" });
     }
@@ -225,6 +253,21 @@ router.get("/reply/:id", async (req, res) => {
   try {
     const { id } = req.params;
     const task = await getTaskReply(id);
+    if (!task) {
+      return res.status(404).json({ message: "Task reply not found" });
+    }
+    res.json(task);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: "Server error" });
+  }
+});
+
+// Get All Reply For Team
+router.post("/team/reply/", async (req, res) => {
+  try {
+    const {task_name, description, due_datetime} = req.body
+    const task = await getTeamTaskReply(task_name, description, due_datetime);
     if (!task) {
       return res.status(404).json({ message: "Task reply not found" });
     }

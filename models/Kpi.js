@@ -49,6 +49,15 @@ module.exports = {
     return result.rows[0];
   },
 
+  async kpiSelfAssessmentScore(assessmentId, score, description) {
+    const query =
+      "UPDATE tbl_kpi_assessment SET score = $2, data_source_detail = $3 WHERE uuid = $1 RETURNING *";
+    const values = [assessmentId, score, description];
+    console.log(values);
+    const result = await pool.query(query, values);
+    return result.rows[0];
+  },
+
   async kpiAssessmentChangeScore(assessmentId, score) {
     const query =
       "UPDATE tbl_kpi_assessment SET score = $2 WHERE uuid = $1 RETURNING *";
@@ -62,6 +71,63 @@ module.exports = {
     const values = [manager_id, team_id];
     const result = await pool.query(query, values);
     return result.rows[0];
+  },
+
+  async getKpiRunning(userId) {
+    const query = `
+    SELECT 
+        kp.kpi_duedate
+FROM 
+    public.tbl_kpi_assessment ka
+    JOIN public.tbl_kpi_assessment_period kp ON ka.assessment_period = kp.kpi_period
+WHERE 
+    kp.kpi_duedate::timestamp with time zone > NOW()
+	AND ka.user_id::uuid = $1
+ORDER BY 
+    kp.kpi_period DESC
+LIMIT 1;
+    `;
+    const values = [userId];
+    const result = await pool.query(query, values);
+    return result.rows[0];
+  },
+
+  async getKPISelfAssessmentData(userId) {
+    const query = `
+    SELECT 
+    ka.uuid as assessment_uuid, ka.assessment_period, ka.score, ka.user_id, ka.rubric_id, ka.assessment_duedate, ka.uraian_kinerja,
+    ar.*, kp.kpi_duedate
+FROM 
+    public.tbl_kpi_assessment ka
+    JOIN public.tbl_assessment_rubric ar ON ka.rubric_id::uuid = ar.uuid
+    JOIN public.tbl_kpi_assessment_period kp ON ka.assessment_period = kp.kpi_period
+WHERE 
+    ar.status_approval = 'approve'
+    AND ar.score_system = 'self_assess'
+    AND ka.user_id = $1
+    AND (ka.score = 0 OR ka.score IS NULL);
+    `;
+    const values = [userId];
+    const result = await pool.query(query, values);
+    return result.rows;
+  },
+
+  async getKPIDetailAssessmentData(userId) {
+    const query = `
+    SELECT 
+    ka.id, ka.uuid, ka.assessment_period, ka.score, ka.user_id, ka.rubric_id, ka.assessment_duedate, ka.uraian_kinerja,
+    ar.*, kp.kpi_duedate
+FROM 
+    public.tbl_kpi_assessment ka
+    JOIN public.tbl_assessment_rubric ar ON ka.rubric_id::uuid = ar.uuid
+    JOIN public.tbl_kpi_assessment_period kp ON ka.assessment_period = kp.kpi_period
+WHERE 
+    ar.status_approval = 'approve'
+    AND ka.user_id = $1;
+    `;
+    const values = [userId];
+    const result = await pool.query(query, values);
+    return result.rows;
   },
 
   async getKpiAssessmentData() {

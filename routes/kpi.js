@@ -17,14 +17,15 @@ const pusher = new Pusher({
 router.post("/period", async (req, res) => {
   try {
     const { kpi_period, kpi_duedate, kpi_startdate } = req.body;
-    console.log(req.body);
     const result = await Kpi.createKpiAssessmentPeriod(kpi_period, kpi_duedate, kpi_startdate);
-    console.log(result);
     if (!result) {
       return res
         .status(404)
         .json({ message: "KPI assessment period creation failed" });
     }
+    pusher.trigger('manager-channel', 'broadcast-event', {
+      message: `HRD has set Assessment Period ${kpi_period}` 
+    });
     res.status(201).json(result);
   } catch (err) {
     console.error(err);

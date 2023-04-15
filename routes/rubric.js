@@ -43,6 +43,10 @@ router.post("/", async (req, res) => {
       data_source,
       team_id
     );
+
+    pusher.trigger('hrd-channel', 'broadcast-event', {
+      message: `A Manager Create Rubric Assessment` 
+    });
     res.status(201).json(result);
   } catch (err) {
     console.error(err);
@@ -127,6 +131,9 @@ router.put("/:id/review", async (req, res) => {
         .status(404)
         .json({ message: "KPI assessment rubric not found" });
     }
+    pusher.trigger('manager-channel', 'broadcast-event', {
+      message: `HRD has approve your submitted rubric` 
+    });
     res.json(result);
   } catch (err) {
     console.error(err);

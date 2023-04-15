@@ -116,4 +116,18 @@ router.get("/manager/assessment/:userId", async (req, res) => {
   }
 });
 
+router.get("/notif/:userId", async (req, res) => {
+  try {
+    const userId = req.params.userId;
+    const result = await Dashboard.getNotification(userId);
+    if (!result) {
+      return res.status(404).json({ message: "No Notification" });
+    }
+    res.json(result);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: "Server error" });
+  }
+});
+
 module.exports = router;

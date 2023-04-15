@@ -329,4 +329,12 @@ WHERE start_time::timestamp with time zone < NOW() AND due_datetime::timestamp w
     const result = await pool.query(query, values);
     return result.rows;
   },
+
+  async getNotification(userId) {
+    const query = `SELECT id, uuid, notif_to, message, notif_at, read
+    FROM public.tbl_notification WHERE notif_to = $1;`;
+    const values = [userId];
+    const result = await pool.query(query, values);
+    return result.rows;
+  },
 };

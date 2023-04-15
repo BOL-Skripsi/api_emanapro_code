@@ -30,12 +30,13 @@ const {
 const Pusher = require('pusher');
 
 const pusher = new Pusher({
-  appId: process.env.APP_ID,
+  appId : process.env.APP_ID,
   key: process.env.APP_KEY,
   secret: process.env.APP_SECRET,
-  cluster: process.env.APP_CLUSTER,
-  useTLS: true
+  cluster: process.env.APP_CLUSTER
 });
+
+console.log(pusher)
 // Create a task
 router.post("/", async (req, res) => {
   try {
@@ -119,6 +120,9 @@ router.post('/:userId/:taskId/reply', upload.single('file'), async (req, res) =>
     if (!replyingTask) {
       return res.status(500).json({ message: 'Failed to reply task' });
     }
+    pusher.trigger('manager-channel', 'broadcast-event', {
+      message: `An Employee has reply a task` 
+    });
     res.status(201).json(replyingTask);
   } catch (err) {
     console.error(err);
@@ -126,7 +130,7 @@ router.post('/:userId/:taskId/reply', upload.single('file'), async (req, res) =>
   }
 });
 
-// Route for reply task
+// Route for manager reply task
 router.put('/:taskId/manager_reply', upload.single('file'), async (req, res) => {
   try {
     const {taskId} = req.params
@@ -137,6 +141,9 @@ router.put('/:taskId/manager_reply', upload.single('file'), async (req, res) => 
     if (!replyingTask) {
       return res.status(500).json({ message: 'Failed to reply task' });
     }
+    pusher.trigger('employee-channel', 'broadcast-event', {
+      message: `Manager has review your reply` 
+    });
     res.status(201).json(replyingTask);
   } catch (err) {
     console.error(err);
@@ -154,6 +161,10 @@ router.post('/team/manager_reply', upload.single('file'), async (req, res) => {
     if (!replyingTask) {
       return res.status(500).json({ message: 'Failed to reply task' });
     }
+    pusher.trigger('employee-channel', 'broadcast-event', {
+      message: `Manager has review your reply`,
+      notif_time: new Date() 
+    });
     res.status(201).json(replyingTask);
   } catch (err) {
     console.error(err);
@@ -172,6 +183,9 @@ router.put('/:taskId/manager_reply', upload.single('file'), async (req, res) => 
     if (!replyingTask) {
       return res.status(500).json({ message: 'Failed to reply task' });
     }
+    pusher.trigger('employee-channel', 'broadcast-event', {
+      message: `Manager has review your reply` 
+    });
     res.status(201).json(replyingTask);
   } catch (err) {
     console.error(err);
